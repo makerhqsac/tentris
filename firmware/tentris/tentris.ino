@@ -19,7 +19,7 @@ short lastX = 0;
 unsigned long toneStamp = millis();
 unsigned short currentNote = 0;
 
-unsigned short level = 300;
+unsigned short level = INITIAL_BLOCK_SPEED;
 unsigned int score = 0;
 unsigned long stamp = 0;
 unsigned long lastDown = 0;
@@ -28,6 +28,12 @@ unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 COLOR grid[BOARD_WIDTH][BOARD_HEIGHT];
 COLOR shapeColors[SHAPE_COUNT];
+
+void fillBlock(byte x, byte y, COLOR color);
+bool debounceButton(int pin);
+void printBoardToSerial();
+void animRandom();
+void checkForTetris();
 
 bool hittingBottom() {
   for (int i = 3; i != 0; i--) {
@@ -42,14 +48,14 @@ void drawNextShape() {
   Serial.print("Next shape: ");
   Serial.println(shapeNames[nextShapeIndex]);
   return;
-  //tft.fillRect(NEXTSHAPE_X, NEXTSHAPE_Y, 30, 30, BACKGROUND_COLOR);
+  /*tft.fillRect(NEXTSHAPE_X, NEXTSHAPE_Y, 30, 30, BACKGROUND_COLOR);
   for (byte i = 0; i < 4; i++) {
     for (short j = 3, x = 0; j != -1; j--, x++) {
       if (bitRead(shapes[nextShapeIndex][0][i], j) == 1) {
         //tft.fillRect(NEXTSHAPE_X + (x * BLOCK_SIZE), NEXTSHAPE_Y + (i * BLOCK_SIZE), BLOCK_SIZE - 1, BLOCK_SIZE - 1, shapeColors[nextShapeIndex]);
       }
     }
-  }
+  }*/
 }
 
 void nextShape() {
@@ -79,8 +85,22 @@ void waitForClick() {
     if (debounceButton(BUTTON_ROTATE)) {
       return;
     }
+    animRandom();
   }
 #endif
+}
+
+void animRandom() {
+  static long last = 0;
+  if (abs(millis() - last) > 100) {
+    last = millis();
+    COLOR c;
+    c.R = random(255);
+    c.G = random(255);
+    c.B = random(255);
+    fillBlock(random(BOARD_WIDTH), random(BOARD_HEIGHT), c);
+    strip.show();
+  }
 }
 
 void saveScore() {
@@ -90,7 +110,6 @@ void saveScore() {
 
   // TODO: Do something
 }
-
 void gameOver() {
   saveScore();
   Serial.println("Game over man! Game over!!");
@@ -500,7 +519,7 @@ void setup() {
   }
   strip.show();
   // TODO: Attach a button
-  //waitForClick();
+  waitForClick();
   currentShape = random(SHAPE_COUNT);
   nextShapeIndex = random(SHAPE_COUNT);
   nextShape();
@@ -528,7 +547,7 @@ void loop() {
     tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
   }
 
-  if ((now - stamp) > level) {
+  if ((now - stamp) > level - score) {
     stamp = millis();
     gravity(true);
   }

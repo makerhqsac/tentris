@@ -24,14 +24,14 @@
 #define BACKGROUND_COLOR  COLOR_GRAY
 
 #define BOARD_WIDTH       10
-#define BOARD_HEIGHT      20
+#define BOARD_HEIGHT      15
 
 #define GAMEOVER_X        90
 #define GAMEOVER_Y        20
 
 #define SCORE_X           GAMEOVER_X
 #define SCORE_Y           GAMEOVER_Y + 50
-#define LINE_SCORE_VALUE  100
+#define LINE_SCORE_VALUE  10
 
 #define MIN(X, Y)         (((X) < (Y)) ? (X) : (Y))
 
@@ -48,15 +48,15 @@
 #define DIM
 #ifdef DIM
 #define COLOR_GRAY        COLOR {2, 2, 2}
-#define COLOR_WHITE       COLOR {5,5,5}
+#define COLOR_WHITE       COLOR {25,25,25}
 #define COLOR_BLACK       COLOR {0,0,0}
-#define COLOR_CYAN        COLOR {0,5,5}
-#define COLOR_YELLOW      COLOR {5,5,0}
-#define COLOR_BLUE        COLOR {0,0,5}
-#define COLOR_ORANGE      COLOR {5,3,0}
-#define COLOR_LIME        COLOR {0,5,0}
-#define COLOR_PURPLE      COLOR {5,0,5}
-#define COLOR_RED         COLOR {5,0,0}
+#define COLOR_CYAN        COLOR {0,25,25}
+#define COLOR_YELLOW      COLOR {25,25,0}
+#define COLOR_BLUE        COLOR {0,0,25}
+#define COLOR_ORANGE      COLOR {25,3,0}
+#define COLOR_LIME        COLOR {0,25,0}
+#define COLOR_PURPLE      COLOR {25,0,25}
+#define COLOR_RED         COLOR {25,0,0}
 #else
 #define COLOR_GRAY        COLOR {33, 33, 33}
 #define COLOR_WHITE       COLOR {255,255,255}
@@ -84,6 +84,7 @@
 #define DOWN_DELAY        150
 #define ROTATE_DELAY      150
 #define DEBOUNCE          50
+#define INITIAL_BLOCK_SPEED 500
 
 #define NEXTSHAPE_X       GAMEOVER_X
 #define NEXTSHAPE_Y       SCORE_Y + 50

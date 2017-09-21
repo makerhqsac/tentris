@@ -6,6 +6,7 @@ project(${PROJECT_NAME})
 set(${CMAKE_PROJECT_NAME}_SKETCH tentris.ino)
 
 link_directories($ENV{HOME}/Documents/Arduino/libraries)
+link_directories($ENV{HOME}/Arduino/libraries)
 
 
 #### Uncomment below additional settings as needed.
