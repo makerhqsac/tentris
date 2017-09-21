@@ -11,7 +11,7 @@ link_directories($ENV{HOME}/Arduino/libraries)
 
 #### Uncomment below additional settings as needed.
 # set(${CMAKE_PROJECT_NAME}_BOARD uno)
-# set(${CMAKE_PROJECT_NAME}_PORT /dev/ttyACM0)
+set(${CMAKE_PROJECT_NAME}_PORT /dev/ttyUSB0)
 # set(mega.build.mcu atmega2560)
 # set(mega.upload.protocol wiring)
 # set(mega.upload.speed 115200)

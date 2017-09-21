@@ -84,7 +84,9 @@
 #define DOWN_DELAY        150
 #define ROTATE_DELAY      150
 #define DEBOUNCE          50
-#define INITIAL_BLOCK_SPEED 500
+#define INITIAL_BLOCK_DELAY 1000
+
+#define ANIM_DELAY        400
 
 #define NEXTSHAPE_X       GAMEOVER_X
 #define NEXTSHAPE_Y       SCORE_Y + 50

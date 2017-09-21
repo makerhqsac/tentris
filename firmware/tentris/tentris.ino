@@ -19,7 +19,7 @@ short lastX = 0;
 unsigned long toneStamp = millis();
 unsigned short currentNote = 0;
 
-unsigned short level = INITIAL_BLOCK_SPEED;
+unsigned short level = INITIAL_BLOCK_DELAY;
 unsigned int score = 0;
 unsigned long stamp = 0;
 unsigned long lastDown = 0;
@@ -43,19 +43,12 @@ bool hittingBottom() {
       }
     }
   }
+
+  return false;
 }
 void drawNextShape() {
   Serial.print("Next shape: ");
   Serial.println(shapeNames[nextShapeIndex]);
-  return;
-  /*tft.fillRect(NEXTSHAPE_X, NEXTSHAPE_Y, 30, 30, BACKGROUND_COLOR);
-  for (byte i = 0; i < 4; i++) {
-    for (short j = 3, x = 0; j != -1; j--, x++) {
-      if (bitRead(shapes[nextShapeIndex][0][i], j) == 1) {
-        //tft.fillRect(NEXTSHAPE_X + (x * BLOCK_SIZE), NEXTSHAPE_Y + (i * BLOCK_SIZE), BLOCK_SIZE - 1, BLOCK_SIZE - 1, shapeColors[nextShapeIndex]);
-      }
-    }
-  }*/
 }
 
 void nextShape() {
@@ -63,7 +56,7 @@ void nextShape() {
   xOffset = BOARD_WIDTH/2-2;
   currentRotation = 0;
   currentShape = nextShapeIndex;
-  nextShapeIndex = random(SHAPE_COUNT);
+  nextShapeIndex = (byte)random(SHAPE_COUNT);
   drawNextShape();
 }
 
@@ -92,12 +85,12 @@ void waitForClick() {
 
 void animRandom() {
   static long last = 0;
-  if (abs(millis() - last) > 100) {
+  if (abs(millis() - last) > ANIM_DELAY) {
     last = millis();
     COLOR c;
-    c.R = random(255);
-    c.G = random(255);
-    c.B = random(255);
+    c.R = (byte)random(50);
+    c.G = (byte)random(50);
+    c.B = (byte)random(50);
     fillBlock(random(BOARD_WIDTH), random(BOARD_HEIGHT), c);
     strip.show();
   }
@@ -362,8 +355,7 @@ void joystickMovement() {
   unsigned long now = millis();
   static bool hasClicked = false;
   static unsigned long lastMove = now;
-  static short lastYoffset = yOffset;
-#ifdef USE_ANALOG_JOY  
+#ifdef USE_ANALOG_JOY
   int joyX = analogRead(JOY_X);
   int joyY = analogRead(JOY_Y);
 
