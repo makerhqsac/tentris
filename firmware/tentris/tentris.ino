@@ -32,8 +32,10 @@ COLOR shapeColors[SHAPE_COUNT];
 void fillBlock(byte x, byte y, COLOR color);
 bool debounceButton(int pin);
 void printBoardToSerial();
-void animRandom();
+void animateRandom();
 void checkForTetris();
+
+void clearBoard();
 
 bool hittingBottom() {
   for (int i = 3; i != 0; i--) {
@@ -61,7 +63,7 @@ void nextShape() {
 }
 
 void waitForClick() {
-
+  int choice = random(2);
 #ifdef USE_ANALOG_JOY
   while (true) {
     while (digitalRead(JOY_BTN) != LOW) {
@@ -78,21 +80,45 @@ void waitForClick() {
     if (debounceButton(BUTTON_ROTATE)) {
       return;
     }
-    animRandom();
+    switch (choice) {
+      case 0: animateRandom(); break;
+      case 1: animateChase(); break;
+      default: animateChase(); break;
+    }
   }
 #endif
 }
 
-void animRandom() {
+COLOR randomColor() {
+    COLOR c;
+    c.R = (byte)random(ANIMATE_MAX_BRIGHT);
+    c.G = (byte)random(ANIMATE_MAX_BRIGHT);
+    c.B = (byte)random(ANIMATE_MAX_BRIGHT);
+    return c;
+}
+void animateRandom() {
   static long last = 0;
   if (abs(millis() - last) > ANIM_DELAY) {
     last = millis();
-    COLOR c;
-    c.R = (byte)random(50);
-    c.G = (byte)random(50);
-    c.B = (byte)random(50);
+    COLOR c = randomColor();
     fillBlock(random(BOARD_WIDTH), random(BOARD_HEIGHT), c);
     strip.show();
+  }
+}
+
+void animateChase() {
+  static long last = 0;
+  static int i = 0;
+  if (abs(millis() - last) > ANIM_CHASE_DELAY) {
+    last = millis();
+    COLOR c = randomColor();
+    COLOR b = BACKGROUND_COLOR;
+    strip.setPixelColor(i, c.R, c.G, c.B); // Draw new pixel
+    strip.setPixelColor(i-ANIM_CHASE_LENGTH, b.R, b.G, b.B); // Erase pixel a few steps back
+    strip.show();
+    i++;
+    if (i > BOARD_WIDTH * BOARD_HEIGHT + ANIM_CHASE_LENGTH)
+      i = 0;
   }
 }
 
@@ -108,25 +134,21 @@ void gameOver() {
   Serial.println("Game over man! Game over!!");
   printBoardToSerial();
   waitForClick();
-
-  for (byte i = 0; i < BOARD_WIDTH; i++) {
-    for (byte j = 0; j < BOARD_HEIGHT; j++) {
-      fillBlock(i, j, BACKGROUND_COLOR);
-    }
-  }
-
+  clearBoard();
   score = 0;
   nextShape();
   strip.show();
 }
 
 void fillBlock(byte x, byte y, COLOR color) {
-  grid[x][y] = color;
+  if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
+    grid[x][y] = color;
 #ifdef TOPDOWN
-  strip.setPixelColor(BOARD_WIDTH * y + x, color.R, color.G, color.B);
+    strip.setPixelColor(BOARD_WIDTH * y + x, color.R, color.G, color.B);
 #else
-  strip.setPixelColor(BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x, color.R, color.G, color.B);
-  /*if (x >= BOARD_WIDTH || x < 0) {
+    strip.setPixelColor(BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x, color.R, color.G, color.B);
+  }
+  if (x >= BOARD_WIDTH || x < 0) {
     Serial.print("X exceeded width ");
     Serial.print(x);
     Serial.print(",");
@@ -137,7 +159,7 @@ void fillBlock(byte x, byte y, COLOR color) {
     Serial.print(x);
     Serial.print(",");
     Serial.println(y);
-  }*/
+  }
 #endif
 }
 
@@ -146,13 +168,13 @@ COLOR getCurrentShapeColor() {
 }
 
 void gravity(bool apply) {
-  static byte lastXoffset = 0;
+  static byte lastXOffset = 0;
 
   for (byte k = 0; k < 2; k++) {
     for (byte i = 0; i < 4; i++) {
       for (short j = 3, x = 0; j != -1; j--, x++) {
         if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
-          fillBlock((k == 0 ? lastXoffset : xOffset) + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : shapeColors[currentShape]);
+          fillBlock((k == 0 ? lastXOffset : xOffset) + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : shapeColors[currentShape]);
         }
       }
     }
@@ -162,8 +184,8 @@ void gravity(bool apply) {
     }
   }
 
-  if (xOffset != lastXoffset) {
-    lastXoffset = xOffset;
+  if (xOffset != lastXOffset) {
+    lastXOffset = xOffset;
   }
   strip.show();
 }
@@ -215,6 +237,7 @@ void checkForTetris() {
   byte rowsPastFirstMatching = 0;
   for (byte row = 0; row < BOARD_HEIGHT; row++) {
     // Tiny optimization: no need to scan more than four rows for line clears
+    // This optimization sounds wrong.
     if (foundScore && (++rowsPastFirstMatching > 4)) {
       return;
     }
@@ -504,14 +527,11 @@ void setup() {
   shapeColors[SHAPE_T] = SHAPE_T_COLOR;
   shapeColors[SHAPE_Z] = SHAPE_Z_COLOR;
 
-  for (byte i = 0; i < BOARD_WIDTH; i++) {
-    for (byte j = 0; j < BOARD_HEIGHT; j++) {
-      fillBlock(i, j, BACKGROUND_COLOR);
-    }
-  }
-  strip.show();
-  // TODO: Attach a button
+  clearBoard();
+    // TODO: Attach a button
   waitForClick();
+  clearBoard();
+  delay(500);
   currentShape = random(SHAPE_COUNT);
   nextShapeIndex = random(SHAPE_COUNT);
   nextShape();
@@ -520,6 +540,15 @@ void setup() {
   stamp = millis();
 
   Serial.println("Setup end");
+}
+
+void clearBoard() {
+    for (byte i = 0; i < BOARD_WIDTH; i++) {
+    for (byte j = 0; j < BOARD_HEIGHT; j++) {
+      fillBlock(i, j, BACKGROUND_COLOR);
+    }
+  }
+  strip.show();
 }
 
 void loop() {
