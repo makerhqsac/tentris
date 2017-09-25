@@ -33,6 +33,8 @@ void fillBlock(byte x, byte y, COLOR color);
 bool debounceButton(int pin);
 void printBoardToSerial();
 void animateRandom();
+void animateChase();
+void animateRain();
 void checkForTetris();
 
 void clearBoard();
@@ -63,7 +65,7 @@ void nextShape() {
 }
 
 void waitForClick() {
-  int choice = random(2);
+  int choice = random(3);
 #ifdef USE_ANALOG_JOY
   while (true) {
     while (digitalRead(JOY_BTN) != LOW) {
@@ -83,6 +85,7 @@ void waitForClick() {
     switch (choice) {
       case 0: animateRandom(); break;
       case 1: animateChase(); break;
+      case 2: animateRain(); break;
       default: animateChase(); break;
     }
   }
@@ -122,12 +125,38 @@ void animateChase() {
   }
 }
 
-void saveScore() {
-  if (!saveScores) {
-    return;
+void animateRain() {
+  int chance;
+  COLOR c = randomColor();
+  for (int y = 0; y < BOARD_HEIGHT-1; y++) {
+    for (int x = 0; x < BOARD_WIDTH; x++) {
+      fillBlock(x,y, grid[x][y+1]);
+    }
   }
 
-  // TODO: Do something
+  for (int i = 0; i < BOARD_WIDTH; i++) {
+    chance = random(100);
+    if (chance < 10) {
+      fillBlock(i, BOARD_HEIGHT-1, c);
+    }
+  }
+
+  strip.show();
+}
+
+void saveScore() {
+  if (saveScores) {
+    unsigned int oldHigh;
+    EEPROM.get(sizeof(int), oldHigh);
+    if (score > oldHigh) {
+      EEPROM.put(sizeof(int), score);
+      Serial.print("New high score!! ");
+      Serial.println(score);
+    } else {
+      Serial.print("High score remains at ");
+      Serial.println(score);
+    }
+  }
 }
 void gameOver() {
   saveScore();
@@ -321,12 +350,15 @@ bool canMove(bool left) {
 
   return true;
 }
-byte getNextRotation() {
-  return (shapeRotations[currentShape] - 1) == currentRotation ? 0 : currentRotation + 1;
+byte getNextRotation(bool reverse) {
+  if (reverse)
+    return currentRotation == 0 ? shapeRotations[currentShape] - 1 : currentRotation - 1;
+  else
+    return (shapeRotations[currentShape] - 1) == currentRotation ? 0 : currentRotation + 1;
 }
 
-bool canRotate() {
-  byte nextRotation = getNextRotation();
+bool canRotate(bool reverse) {
+  byte nextRotation = getNextRotation(reverse);
 
   for (byte k = 0; k < 1; k++) {
     for (byte i = 0; i < 4; i++) {
@@ -336,7 +368,6 @@ bool canRotate() {
             // will rotate off grid
             return false;
           }
-
 
           if (grid[xOffset + x][yOffset + i] != BACKGROUND_COLOR) {
             if (bitRead(shapes[currentShape][currentRotation][i], j) != 1) {
@@ -351,26 +382,25 @@ bool canRotate() {
   return true;
 }
 
-void rotate() {
+void rotate(bool reverse) {
+  // Optimization for square
   if (shapeRotations[currentShape] == 1) {
     return;
   }
 
-  if (!canRotate()) {
-    return;
-  }
-
-  for (byte k = 0; k < 1; k++) {
-    for (byte i = 0; i < 4; i++) {
-      for (short j = 3, x = 0; j != -1; j--, x++) {
-        if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
-          fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
+  if (canRotate(reverse)) {
+    currentRotation = getNextRotation(reverse);
+    for (byte k = 0; k < 1; k++) {
+      for (byte i = 0; i < 4; i++) {
+        for (short j = 3, x = 0; j != -1; j--, x++) {
+          if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
+            fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
+          }
         }
       }
-    }
 
-    strip.show();
-    currentRotation = getNextRotation();
+      strip.show();
+    }
   }
 }
 
@@ -431,21 +461,29 @@ void joystickMovement() {
     lastDown = now;
   }
 
-  bool rotatePressed = false;
+  //bool rotateRightPressed = false;
   if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE)) {
-    stamp -= level;
+    //stamp -= level;
     lastRotate = now;
-    rotatePressed = true;
+    //rotateRightPressed = true;
+    rotate(false);
+  }
+
+  if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE_REVERSE)) {
+    //stamp -= level;
+    lastRotate = now;
+    //rotateRightPressed = true;
+    rotate(true);
   }
   
 #endif
 
 
-  hasClicked = hasClicked && rotatePressed;
-  if (!hasClicked && rotatePressed) {
-    hasClicked = true;
-    rotate();
-  }
+  //hasClicked = hasClicked && rotateRightPressed;
+  //if (!hasClicked && rotateRightPressed) {
+    //hasClicked = true;
+    //rotate(false);
+  //}
 }
 
 bool debounceButton(int pin) {
@@ -473,6 +511,15 @@ void printBoardToSerial() {
     Serial.println();
   }
 #endif
+}
+
+void clearBoard() {
+  for (byte i = 0; i < BOARD_WIDTH; i++) {
+    for (byte j = 0; j < BOARD_HEIGHT; j++) {
+      fillBlock(i, j, BACKGROUND_COLOR);
+    }
+  }
+  strip.show();
 }
 
 void setup() {
@@ -513,12 +560,21 @@ void setup() {
   pinMode(BUTTON_ROTATE, INPUT_PULLUP);
 #endif
 
+  // Clear out the EEPROM if this is our first time through. Good for keeping a realistic high score.
+  unsigned int testValue;
+  EEPROM.get(sizeof(int)*2, testValue);
+  if (testValue != 0){
+    unsigned int test = 0;
+    EEPROM.put(0, test);
+    EEPROM.put(sizeof(int), test);
+    EEPROM.put(sizeof(int) * 2, test);
+  }
+
   unsigned int seed = 0;
   EEPROM.get(0, seed);
   randomSeed(seed);
   seed = random(65535);
   EEPROM.put(0, seed);
-
   shapeColors[SHAPE_I] = SHAPE_I_COLOR;
   shapeColors[SHAPE_J] = SHAPE_J_COLOR;
   shapeColors[SHAPE_L] = SHAPE_L_COLOR;
@@ -528,7 +584,6 @@ void setup() {
   shapeColors[SHAPE_Z] = SHAPE_Z_COLOR;
 
   clearBoard();
-    // TODO: Attach a button
   waitForClick();
   clearBoard();
   delay(500);
@@ -540,15 +595,6 @@ void setup() {
   stamp = millis();
 
   Serial.println("Setup end");
-}
-
-void clearBoard() {
-    for (byte i = 0; i < BOARD_WIDTH; i++) {
-    for (byte j = 0; j < BOARD_HEIGHT; j++) {
-      fillBlock(i, j, BACKGROUND_COLOR);
-    }
-  }
-  strip.show();
 }
 
 void loop() {

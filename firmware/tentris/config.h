@@ -17,6 +17,7 @@
 #define BUTTON_RIGHT      2
 #define BUTTON_DOWN       3
 #define BUTTON_ROTATE     4
+#define BUTTON_ROTATE_REVERSE 5
 #endif
 
 #define BUZZER            9
