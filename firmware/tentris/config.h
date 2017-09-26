@@ -14,10 +14,17 @@
 #define JOY_BTN           2
 #else
 #define BUTTON_LEFT       0
-#define BUTTON_RIGHT      2
-#define BUTTON_DOWN       3
-#define BUTTON_ROTATE     4
-#define BUTTON_ROTATE_REVERSE 5
+#define BUTTON_RIGHT      1
+#define BUTTON_DOWN       4
+#define BUTTON_ROTATE     2
+#define BUTTON_ROTATE_REVERSE 3
+#endif
+
+#define USE_SKYWRITER
+
+#ifdef USE_SKYWRITER
+#define SK_PIN_TRFR       6
+#define SK_PIN_RESET      5
 #endif
 
 #define BUZZER            9

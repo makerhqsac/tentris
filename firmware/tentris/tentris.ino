@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include <EEPROM.h>
 #include <Adafruit_NeoPixel.h>
+#include <skywriter.h>
 
 #include "config.h"
 #include "shapes.h"
@@ -486,6 +487,51 @@ void joystickMovement() {
   //}
 }
 
+#ifdef USE_SKYWRITER
+void handleGesture(unsigned char type){
+    unsigned long now = millis();
+
+    switch (type) {
+            // flick left
+        case SW_FLICK_EAST_WEST:
+            if (canMove(true)) {
+                xOffset--;
+            }
+            break;
+
+            // flick right
+        case SW_FLICK_WEST_EAST:
+            if (canMove(false)) {
+                xOffset++;
+            }
+            break;
+
+            // flick down
+        case SW_FLICK_NORTH_SOUTH:
+            stamp -= level;
+            lastDown = now;
+            break;
+    }
+}
+
+void handleAirwheel(int speed) {
+    unsigned long now = millis();
+
+    if (speed > 0 && now - lastRotate > ROTATE_DELAY) {
+        //stamp -= level;
+        lastRotate = now;
+        //rotateRightPressed = true;
+        rotate(false);
+
+    } else if (speed < 0 && now - lastRotate > ROTATE_DELAY) {
+        //stamp -= level;
+        lastRotate = now;
+        //rotateRightPressed = true;
+        rotate(true);
+    }
+}
+#endif
+
 bool debounceButton(int pin) {
   unsigned long now = millis();
   if (digitalRead(pin) == LOW && abs(now - lastButton[pin]) > DEBOUNCE) {
@@ -560,6 +606,12 @@ void setup() {
   pinMode(BUTTON_ROTATE, INPUT_PULLUP);
 #endif
 
+#ifdef USE_SKYWRITER
+    Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
+    Skywriter.onGesture(handleGesture);
+    Skywriter.onAirwheel(handleAirwheel);
+#endif
+
   // Clear out the EEPROM if this is our first time through. Good for keeping a realistic high score.
   unsigned int testValue;
   EEPROM.get(sizeof(int)*2, testValue);
@@ -627,5 +679,10 @@ void loop() {
   }
 
   joystickMovement();
+
+#ifdef USE_SKYWRITER
+    Skywriter.poll();
+#endif
+
 }
 
