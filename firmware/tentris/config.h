@@ -2,9 +2,9 @@
 #define config_h
 
 
-#define SD_CS             4
+#define SD_CS             8
 
-#define NEO_PIN           6
+#define NEO_PIN           7
 
 #undef USE_ANALOG_JOY
 
@@ -13,8 +13,8 @@
 #define JOY_Y             A1
 #define JOY_BTN           2
 #else
-#define BUTTON_LEFT       0
-#define BUTTON_RIGHT      1
+#define BUTTON_LEFT       A0
+#define BUTTON_RIGHT      A1
 #define BUTTON_DOWN       4
 #define BUTTON_ROTATE     2
 #define BUTTON_ROTATE_REVERSE 3

@@ -37,6 +37,8 @@ void animateRandom();
 void animateChase();
 void animateRain();
 void checkForTetris();
+void handleGesture(unsigned char type);
+void handleAirwheel(int speed);
 
 void clearBoard();
 
@@ -491,27 +493,23 @@ void joystickMovement() {
 void handleGesture(unsigned char type){
     unsigned long now = millis();
 
-    switch (type) {
-            // flick left
-        case SW_FLICK_EAST_WEST:
-            if (canMove(true)) {
-                xOffset--;
-            }
-            break;
-
-            // flick right
-        case SW_FLICK_WEST_EAST:
-            if (canMove(false)) {
-                xOffset++;
-            }
-            break;
-
-            // flick down
-        case SW_FLICK_NORTH_SOUTH:
-            stamp -= level;
-            lastDown = now;
-            break;
+    if (type == SW_FLICK_EAST_WEST) {
+        if (canMove(true)) {
+            xOffset--;
+        }
     }
+
+    if (type == SW_FLICK_WEST_EAST) {
+        if (canMove(false)) {
+            xOffset++;
+        }
+    }
+
+    if (type == SW_FLICK_NORTH_SOUTH) {
+        stamp -= level;
+        lastDown = now;
+    }
+
 }
 
 void handleAirwheel(int speed) {
@@ -604,12 +602,7 @@ void setup() {
   pinMode(BUTTON_RIGHT, INPUT_PULLUP);
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
   pinMode(BUTTON_ROTATE, INPUT_PULLUP);
-#endif
-
-#ifdef USE_SKYWRITER
-    Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
-    Skywriter.onGesture(handleGesture);
-    Skywriter.onAirwheel(handleAirwheel);
+  pinMode(BUTTON_ROTATE_REVERSE, INPUT_PULLUP);
 #endif
 
   // Clear out the EEPROM if this is our first time through. Good for keeping a realistic high score.
@@ -636,7 +629,7 @@ void setup() {
   shapeColors[SHAPE_Z] = SHAPE_Z_COLOR;
 
   clearBoard();
-  waitForClick();
+  //waitForClick();
   clearBoard();
   delay(500);
   currentShape = random(SHAPE_COUNT);
@@ -645,6 +638,12 @@ void setup() {
   Serial.print("First shape: ");
   Serial.println(shapeNames[currentShape]);
   stamp = millis();
+
+#ifdef USE_SKYWRITER
+    Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
+    Skywriter.onGesture(handleGesture);
+    Skywriter.onAirwheel(handleAirwheel);
+#endif
 
   Serial.println("Setup end");
 }
