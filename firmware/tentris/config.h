@@ -1,12 +1,14 @@
 #ifndef config_h
 #define config_h
 
+#undef USE_ANALOG_JOY
+#define USE_SKYWRITER
+#undef USE_BUTTONS
 
 #define SD_CS             8
 
 #define NEO_PIN           7
 
-#undef USE_ANALOG_JOY
 
 #ifdef USE_ANALOG_JOY
 #define JOY_X             A0
@@ -20,7 +22,6 @@
 #define BUTTON_ROTATE_REVERSE 3
 #endif
 
-#define USE_SKYWRITER
 
 #ifdef USE_SKYWRITER
 #define SK_PIN_TRFR       6
@@ -39,7 +40,7 @@
 
 #define SCORE_X           GAMEOVER_X
 #define SCORE_Y           GAMEOVER_Y + 50
-#define LINE_SCORE_VALUE  10
+#define LINE_SCORE_VALUE  50
 
 #define MIN(X, Y)         (((X) < (Y)) ? (X) : (Y))
 
@@ -92,7 +93,7 @@
 
 #define MOVE_DELAY        200
 #define DOWN_DELAY        150
-#define ROTATE_DELAY      150
+#define ROTATE_DELAY      500
 #define DEBOUNCE          50
 #define INITIAL_BLOCK_DELAY 1000
 

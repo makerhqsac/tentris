@@ -15,6 +15,6 @@ set(${CMAKE_PROJECT_NAME}_PORT /dev/ttyUSB0)
 set(diecimila.build.mcu atmega328p)
 set(${TARGET_NAME}_PROGRAMMER avrispmkii)
 # set(mega.upload.protocol wiring)
-# set(diecimila.upload.speed 115200)
+set(diecimila.upload.speed 57600)
 
 generate_arduino_firmware(${CMAKE_PROJECT_NAME})

@@ -11,6 +11,7 @@ bool saveScores = true;
 byte currentShape = 0;
 byte currentRotation = 0;
 byte nextShapeIndex = 0;
+bool runrun = true;
 
 short yOffset = -4;
 short xOffset = 0;
@@ -39,6 +40,8 @@ void animateRain();
 void checkForTetris();
 void handleGesture(unsigned char type);
 void handleAirwheel(int speed);
+void anyGesture(unsigned char dontcare);
+void anyWheel(int dontcare);
 
 void clearBoard();
 
@@ -80,7 +83,24 @@ void waitForClick() {
       return;
     }
   }
-#else
+#endif
+#ifdef USE_SKYWRITER
+  runrun = true;
+  Skywriter.onGesture(anyGesture);
+  Skywriter.onAirwheel(anyWheel);
+  while (runrun) {
+    switch (choice) {
+      case 0: animateRandom(); break;
+      case 1: animateChase(); break;
+      case 2: animateRain(); break;
+      default: animateChase(); break;
+    }
+    Skywriter.poll();
+  }
+  Skywriter.onGesture(handleGesture);
+  Skywriter.onAirwheel(handleAirwheel);
+#endif
+#ifdef USE_BUTTONS
   while (true) {
     if (debounceButton(BUTTON_ROTATE)) {
       return;
@@ -180,7 +200,7 @@ void fillBlock(byte x, byte y, COLOR color) {
 #else
     strip.setPixelColor(BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x, color.R, color.G, color.B);
   }
-  if (x >= BOARD_WIDTH || x < 0) {
+  /*if (x >= BOARD_WIDTH || x < 0) {
     Serial.print("X exceeded width ");
     Serial.print(x);
     Serial.print(",");
@@ -191,7 +211,7 @@ void fillBlock(byte x, byte y, COLOR color) {
     Serial.print(x);
     Serial.print(",");
     Serial.println(y);
-  }
+  }*/
 #endif
 }
 
@@ -282,6 +302,8 @@ void checkForTetris() {
       // If detected full line
       if (col == (BOARD_WIDTH - 1)) {
         score += LINE_SCORE_VALUE;
+        Serial.print("Score: ");
+        Serial.println(score);
         foundScore = true;
 
         for (byte i = 0; i < BOARD_WIDTH; i++) {
@@ -354,10 +376,14 @@ bool canMove(bool left) {
   return true;
 }
 byte getNextRotation(bool reverse) {
+  byte returnValue;
   if (reverse)
-    return currentRotation == 0 ? shapeRotations[currentShape] - 1 : currentRotation - 1;
+    returnValue = currentRotation == 0 ? shapeRotations[currentShape] - 1 : currentRotation - 1;
   else
-    return (shapeRotations[currentShape] - 1) == currentRotation ? 0 : currentRotation + 1;
+    returnValue = (shapeRotations[currentShape] - 1) == currentRotation ? 0 : currentRotation + 1;
+  Serial.print("Rotation: ");
+  Serial.println(returnValue);
+  return returnValue;
 }
 
 bool canRotate(bool reverse) {
@@ -392,18 +418,19 @@ void rotate(bool reverse) {
   }
 
   if (canRotate(reverse)) {
-    currentRotation = getNextRotation(reverse);
-    for (byte k = 0; k < 1; k++) {
-      for (byte i = 0; i < 4; i++) {
-        for (short j = 3, x = 0; j != -1; j--, x++) {
-          if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
-            fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
+      for (byte k = 0; k <= 1; k++) {
+          for (byte i = 0; i < 4; i++) {
+              for (short j = 3, x = 0; j != -1; j--, x++) {
+                  if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
+                      fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
+                  }
+              }
           }
-        }
+          if (k == 0)
+              currentRotation = getNextRotation(reverse);
       }
 
       strip.show();
-    }
   }
 }
 
@@ -441,21 +468,22 @@ void joystickMovement() {
     stamp -= level;
     lastDown = now;
   }
-#else
+#endif
+#ifdef USE_BUTTONS
   // Handle buttons
   if ((now - lastMove) > MOVE_DELAY){
     // Left
     bool leftPressed = debounceButton(BUTTON_LEFT);
     if (leftPressed && canMove(true)) {
       lastMove = now;
-      xOffset--; 
+      xOffset--;
     }
 
     // Right
     bool rightPressed = debounceButton(BUTTON_RIGHT);
     if (rightPressed && canMove(false)) {
       lastMove = now;
-      xOffset++; 
+      xOffset++;
     }
   }
 
@@ -464,32 +492,27 @@ void joystickMovement() {
     lastDown = now;
   }
 
-  //bool rotateRightPressed = false;
   if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE)) {
-    //stamp -= level;
     lastRotate = now;
-    //rotateRightPressed = true;
     rotate(false);
   }
 
-  if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE_REVERSE)) {
-    //stamp -= level;
-    lastRotate = now;
-    //rotateRightPressed = true;
-    rotate(true);
-  }
-  
-#endif
-
-
-  //hasClicked = hasClicked && rotateRightPressed;
-  //if (!hasClicked && rotateRightPressed) {
-    //hasClicked = true;
-    //rotate(false);
+  //if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE_REVERSE)) {
+    //lastRotate = now;
+    //rotate(true);
   //}
+#endif
 }
 
 #ifdef USE_SKYWRITER
+void anyGesture(unsigned char dontcare) {
+  runrun = false;
+}
+
+void anyWheel(int dontcare) {
+  runrun = false;
+}
+
 void handleGesture(unsigned char type){
     unsigned long now = millis();
 
@@ -516,15 +539,11 @@ void handleAirwheel(int speed) {
     unsigned long now = millis();
 
     if (speed > 0 && now - lastRotate > ROTATE_DELAY) {
-        //stamp -= level;
         lastRotate = now;
-        //rotateRightPressed = true;
         rotate(false);
 
     } else if (speed < 0 && now - lastRotate > ROTATE_DELAY) {
-        //stamp -= level;
         lastRotate = now;
-        //rotateRightPressed = true;
         rotate(true);
     }
 }
@@ -543,7 +562,7 @@ bool debounceButton(int pin) {
 }
 
 void printBoardToSerial() {
-#ifdef DEBUG  
+#ifdef DEBUG
   for (int y = 0; y < BOARD_HEIGHT; y++)  {
     for (int x = 0; x < BOARD_WIDTH; x++)  {
       if (grid[x][y] == BACKGROUND_COLOR) {
@@ -593,11 +612,12 @@ void setup() {
   }
 #endif
 
-#ifdef USE_ANALOG_JOY  
+#ifdef USE_ANALOG_JOY
   pinMode(JOY_X, INPUT);
   pinMode(JOY_Y, INPUT);
   pinMode(JOY_BTN, INPUT_PULLUP);
-#else
+#endif
+#ifdef USE_BUTTONS
   pinMode(BUTTON_LEFT, INPUT_PULLUP);
   pinMode(BUTTON_RIGHT, INPUT_PULLUP);
   pinMode(BUTTON_DOWN, INPUT_PULLUP);
@@ -640,9 +660,12 @@ void setup() {
   stamp = millis();
 
 #ifdef USE_SKYWRITER
-    Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
-    Skywriter.onGesture(handleGesture);
-    Skywriter.onAirwheel(handleAirwheel);
+  Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
+  // Hack to ensure that it connects
+  delay(50);
+  Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
+  Skywriter.onGesture(handleGesture);
+  Skywriter.onAirwheel(handleAirwheel);
 #endif
 
   Serial.println("Setup end");
@@ -684,4 +707,3 @@ void loop() {
 #endif
 
 }
-
