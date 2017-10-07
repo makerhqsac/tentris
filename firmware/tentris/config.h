@@ -3,7 +3,8 @@
 
 #undef USE_ANALOG_JOY
 #define USE_SKYWRITER
-#undef USE_BUTTONS
+#define USE_BUTTONS
+#define DIM
 
 #define SD_CS             8
 
@@ -54,7 +55,6 @@
 #define SHAPE_T           5
 #define SHAPE_Z           6
 
-#define DIM
 #ifdef DIM
 #define ANIMATE_MAX_BRIGHT 50
 #define COLOR_GRAY        COLOR {2, 2, 2}

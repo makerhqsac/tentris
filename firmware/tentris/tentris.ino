@@ -42,6 +42,7 @@ void handleGesture(unsigned char type);
 void handleAirwheel(int speed);
 void anyGesture(unsigned char dontcare);
 void anyWheel(int dontcare);
+void anyXYZ(unsigned int x, unsigned int y, unsigned int z);
 
 void clearBoard();
 
@@ -63,7 +64,7 @@ void drawNextShape() {
 
 void nextShape() {
   yOffset = -4;
-  xOffset = BOARD_WIDTH/2-2;
+  xOffset = BOARD_WIDTH/2-1;
   currentRotation = 0;
   currentShape = nextShapeIndex;
   nextShapeIndex = (byte)random(SHAPE_COUNT);
@@ -86,8 +87,7 @@ void waitForClick() {
 #endif
 #ifdef USE_SKYWRITER
   runrun = true;
-  Skywriter.onGesture(anyGesture);
-  Skywriter.onAirwheel(anyWheel);
+  long delayGesture = millis();
   while (runrun) {
     switch (choice) {
       case 0: animateRandom(); break;
@@ -96,11 +96,21 @@ void waitForClick() {
       default: animateChase(); break;
     }
     Skywriter.poll();
+    if (debounceButton(BUTTON_ROTATE)) {
+      runrun = false;
+    }
+   
+    if (delayGesture > 0 && millis() - 5000 > delayGesture) {
+      Skywriter.onGesture(anyGesture);
+      Skywriter.onAirwheel(anyWheel);
+      Skywriter.onXYZ(anyXYZ);
+      delayGesture = 0;
+    }
   }
   Skywriter.onGesture(handleGesture);
   Skywriter.onAirwheel(handleAirwheel);
 #endif
-#ifdef USE_BUTTONS
+#ifdef USE_BUTTONSasdf
   while (true) {
     if (debounceButton(BUTTON_ROTATE)) {
       return;
@@ -513,6 +523,11 @@ void anyWheel(int dontcare) {
   runrun = false;
 }
 
+void anyXYZ(unsigned int x, unsigned int y, unsigned int z){
+  runrun = false;
+  Skywriter.onXYZ(NULL);
+}
+
 void handleGesture(unsigned char type){
     unsigned long now = millis();
 
@@ -538,11 +553,11 @@ void handleGesture(unsigned char type){
 void handleAirwheel(int speed) {
     unsigned long now = millis();
 
-    if (speed > 0 && now - lastRotate > ROTATE_DELAY) {
+    if (speed > 5 && now - lastRotate > ROTATE_DELAY) {
         lastRotate = now;
         rotate(false);
 
-    } else if (speed < 0 && now - lastRotate > ROTATE_DELAY) {
+    } else if (speed < -5 && now - lastRotate > ROTATE_DELAY) {
         lastRotate = now;
         rotate(true);
     }
