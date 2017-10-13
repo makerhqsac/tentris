@@ -3,7 +3,8 @@
 
 #undef USE_ANALOG_JOY
 #define USE_SKYWRITER
-#undef USE_BUTTONS
+#define USE_BUTTONS
+#undef DIM
 
 #define SD_CS             8
 
@@ -15,10 +16,10 @@
 #define JOY_Y             A1
 #define JOY_BTN           2
 #else
-#define BUTTON_LEFT       A0
-#define BUTTON_RIGHT      A1
-#define BUTTON_DOWN       4
-#define BUTTON_ROTATE     2
+#define BUTTON_LEFT       A0 
+#define BUTTON_RIGHT      A1 
+#define BUTTON_DOWN       4 
+#define BUTTON_ROTATE     2 
 #define BUTTON_ROTATE_REVERSE 3
 #endif
 
@@ -30,10 +31,10 @@
 
 #define BUZZER            9
 
-#define BACKGROUND_COLOR  COLOR_GRAY
+#define BACKGROUND_COLOR  COLOR_BLACK
 
 #define BOARD_WIDTH       10
-#define BOARD_HEIGHT      16
+#define BOARD_HEIGHT      20
 
 #define GAMEOVER_X        90
 #define GAMEOVER_Y        20
@@ -54,7 +55,6 @@
 #define SHAPE_T           5
 #define SHAPE_Z           6
 
-#define DIM
 #ifdef DIM
 #define ANIMATE_MAX_BRIGHT 50
 #define COLOR_GRAY        COLOR {2, 2, 2}

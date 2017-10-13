@@ -1,7 +1,8 @@
 #ifndef shapes_h
 #define shapes_h
 
-#define swap(a, b) { COLOR t = a; a = b; b = t; }
+#define swap2(x,y,x2,y2) { COLOR t = getPixel(x,y); fillBlock(x,y,getPixel(x2,y2)); fillBlock(x2,y2,t); }
+
 struct COLOR {
   byte R;
   byte G;

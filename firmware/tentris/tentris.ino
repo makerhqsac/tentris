@@ -28,7 +28,6 @@ unsigned long lastDown = 0;
 unsigned long lastRotate = 0;
 unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
-COLOR grid[BOARD_WIDTH][BOARD_HEIGHT];
 COLOR shapeColors[SHAPE_COUNT];
 
 void fillBlock(byte x, byte y, COLOR color);
@@ -42,6 +41,7 @@ void handleGesture(unsigned char type);
 void handleAirwheel(int speed);
 void anyGesture(unsigned char dontcare);
 void anyWheel(int dontcare);
+void anyXYZ(unsigned int x, unsigned int y, unsigned int z);
 
 void clearBoard();
 
@@ -63,7 +63,7 @@ void drawNextShape() {
 
 void nextShape() {
   yOffset = -4;
-  xOffset = BOARD_WIDTH/2-2;
+  xOffset = BOARD_WIDTH / 2 - 1;
   currentRotation = 0;
   currentShape = nextShapeIndex;
   nextShapeIndex = (byte)random(SHAPE_COUNT);
@@ -86,8 +86,7 @@ void waitForClick() {
 #endif
 #ifdef USE_SKYWRITER
   runrun = true;
-  Skywriter.onGesture(anyGesture);
-  Skywriter.onAirwheel(anyWheel);
+  long delayGesture = millis();
   while (runrun) {
     switch (choice) {
       case 0: animateRandom(); break;
@@ -96,11 +95,21 @@ void waitForClick() {
       default: animateChase(); break;
     }
     Skywriter.poll();
+    if (debounceButton(BUTTON_ROTATE)) {
+      runrun = false;
+    }
+
+    if (delayGesture > 0 && millis() - 5000 > delayGesture) {
+      Skywriter.onGesture(anyGesture);
+      Skywriter.onAirwheel(anyWheel);
+      Skywriter.onXYZ(anyXYZ);
+      delayGesture = 0;
+    }
   }
   Skywriter.onGesture(handleGesture);
   Skywriter.onAirwheel(handleAirwheel);
 #endif
-#ifdef USE_BUTTONS
+#ifdef USE_BUTTONSasdf
   while (true) {
     if (debounceButton(BUTTON_ROTATE)) {
       return;
@@ -109,18 +118,18 @@ void waitForClick() {
       case 0: animateRandom(); break;
       case 1: animateChase(); break;
       case 2: animateRain(); break;
-      default: animateChase(); break;
+      default: animateRain(); break;
     }
   }
 #endif
 }
 
 COLOR randomColor() {
-    COLOR c;
-    c.R = (byte)random(ANIMATE_MAX_BRIGHT);
-    c.G = (byte)random(ANIMATE_MAX_BRIGHT);
-    c.B = (byte)random(ANIMATE_MAX_BRIGHT);
-    return c;
+  COLOR c;
+  c.R = (byte)random(ANIMATE_MAX_BRIGHT);
+  c.G = (byte)random(ANIMATE_MAX_BRIGHT);
+  c.B = (byte)random(ANIMATE_MAX_BRIGHT);
+  return c;
 }
 void animateRandom() {
   static long last = 0;
@@ -140,7 +149,7 @@ void animateChase() {
     COLOR c = randomColor();
     COLOR b = BACKGROUND_COLOR;
     strip.setPixelColor(i, c.R, c.G, c.B); // Draw new pixel
-    strip.setPixelColor(i-ANIM_CHASE_LENGTH, b.R, b.G, b.B); // Erase pixel a few steps back
+    strip.setPixelColor(i - ANIM_CHASE_LENGTH, b.R, b.G, b.B); // Erase pixel a few steps back
     strip.show();
     i++;
     if (i > BOARD_WIDTH * BOARD_HEIGHT + ANIM_CHASE_LENGTH)
@@ -149,36 +158,39 @@ void animateChase() {
 }
 
 void animateRain() {
-  int chance;
-  COLOR c = randomColor();
-  for (int y = 0; y < BOARD_HEIGHT-1; y++) {
-    for (int x = 0; x < BOARD_WIDTH; x++) {
-      fillBlock(x,y, grid[x][y+1]);
+  static long last = 0;
+  if (abs(millis() - last) > ANIM_CHASE_DELAY) {
+    int chance;
+    COLOR c = randomColor();
+    for (int y = BOARD_HEIGHT - 1; y >= 0; y--) {
+      for (int x = 0; x < BOARD_WIDTH; x++) {
+        fillBlock(x, y, getPixel(x, y - 1));
+      }
     }
-  }
 
-  for (int i = 0; i < BOARD_WIDTH; i++) {
-    chance = random(100);
-    if (chance < 10) {
-      fillBlock(i, BOARD_HEIGHT-1, c);
+    for (int i = 0; i < BOARD_WIDTH; i++) {
+      chance = random(100);
+      if (chance < 10) {
+        fillBlock(i, 0, c);
+      }
     }
-  }
 
-  strip.show();
+    strip.show();
+    last = millis();
+  }
 }
-
 void saveScore() {
   if (saveScores) {
     unsigned int oldHigh;
-    EEPROM.get(sizeof(int), oldHigh);
-    if (score > oldHigh) {
-      EEPROM.put(sizeof(int), score);
-      Serial.print("New high score!! ");
-      Serial.println(score);
-    } else {
-      Serial.print("High score remains at ");
-      Serial.println(score);
-    }
+        EEPROM.get(sizeof(int), oldHigh);
+        if (score > oldHigh) {
+          EEPROM.put(sizeof(int), score);
+          Serial.print("New high score!! ");
+          Serial.println(score);
+        } else {
+          Serial.print("High score remains at ");
+          Serial.println(score);
+        }
   }
 }
 void gameOver() {
@@ -194,25 +206,24 @@ void gameOver() {
 
 void fillBlock(byte x, byte y, COLOR color) {
   if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
-    grid[x][y] = color;
 #ifdef TOPDOWN
     strip.setPixelColor(BOARD_WIDTH * y + x, color.R, color.G, color.B);
 #else
     strip.setPixelColor(BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x, color.R, color.G, color.B);
+#endif
   }
   /*if (x >= BOARD_WIDTH || x < 0) {
     Serial.print("X exceeded width ");
     Serial.print(x);
     Serial.print(",");
     Serial.println(y);
-  }
-  if (y >= BOARD_HEIGHT || y < 0) {
+    }
+    if (y >= BOARD_HEIGHT || y < 0) {
     Serial.print("Y exceeded height ");
     Serial.print(x);
     Serial.print(",");
     Serial.println(y);
-  }*/
-#endif
+    }*/
 }
 
 COLOR getCurrentShapeColor() {
@@ -259,7 +270,7 @@ bool isShapeColliding() {
     byte x = 0;
     for (short j = 3; j != -1; j--) {
       if (bitRead(p[i], j) == 1) {
-        if (grid[xOffset + x][max(0, yOffset + i + 1)] != BACKGROUND_COLOR) {
+        if (getPixel(xOffset + x, max(0, yOffset + i + 1)) != BACKGROUND_COLOR) {
           if (yOffset < -1) {
             gameOver();
           }
@@ -295,7 +306,7 @@ void checkForTetris() {
     }
 
     for (byte col = 0; col < BOARD_WIDTH; col++) {
-      if (grid[col][row] == BACKGROUND_COLOR) {
+      if (getPixel(col, row) == BACKGROUND_COLOR) {
         break;
       }
 
@@ -312,8 +323,8 @@ void checkForTetris() {
 
         for (byte r = row; r > 1; r--) {
           for (byte c = 0; c < BOARD_WIDTH; c++) {
-            swap(grid[c][r], grid[c][r - 1]);
-            fillBlock(c, r, grid[c][r]);
+            swap2(c, r, c, r - 1);
+            fillBlock(c, r, getPixel(c, r));
           }
         }
       }
@@ -366,7 +377,7 @@ bool canMove(bool left) {
   for (byte i = 0; i < 4; i++) {
     for (short j = 3, x = 0; j != -1; j--, x++) {
       if ((yOffset + i) >= 0) {
-        if ((bitRead(predictedShapePositions[i], j) == 1) && (grid[xOffset + x + (left ? -1 : 1)][yOffset + i] != BACKGROUND_COLOR)) {
+        if ((bitRead(predictedShapePositions[i], j) == 1) && (getPixel(xOffset + x + (left ? -1 : 1), yOffset + i) != BACKGROUND_COLOR)) {
           return false;
         }
       }
@@ -386,6 +397,25 @@ byte getNextRotation(bool reverse) {
   return returnValue;
 }
 
+COLOR getPixel(uint16_t x, uint16_t y) {
+  if (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT) {
+#ifdef TOPDOWN
+  uint16_t pixel = BOARD_WIDTH * y + x;
+#else
+  uint16_t pixel = BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
+#endif
+  uint32_t c = strip.getPixelColor(pixel);
+  COLOR retval;
+  retval.R = (uint8_t)(c >> 16);
+  retval.G = (uint8_t)(c >>  8);
+  retval.B = (uint8_t)c;
+  return retval;
+  } else {
+    return COLOR {1,2,3};
+    //return BACKGROUND_COLOR;
+  }
+}
+
 bool canRotate(bool reverse) {
   byte nextRotation = getNextRotation(reverse);
 
@@ -398,7 +428,7 @@ bool canRotate(bool reverse) {
             return false;
           }
 
-          if (grid[xOffset + x][yOffset + i] != BACKGROUND_COLOR) {
+          if (getPixel(xOffset + x, yOffset + i) != BACKGROUND_COLOR) {
             if (bitRead(shapes[currentShape][currentRotation][i], j) != 1) {
               return false;
             }
@@ -418,19 +448,19 @@ void rotate(bool reverse) {
   }
 
   if (canRotate(reverse)) {
-      for (byte k = 0; k <= 1; k++) {
-          for (byte i = 0; i < 4; i++) {
-              for (short j = 3, x = 0; j != -1; j--, x++) {
-                  if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
-                      fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
-                  }
-              }
+    for (byte k = 0; k <= 1; k++) {
+      for (byte i = 0; i < 4; i++) {
+        for (short j = 3, x = 0; j != -1; j--, x++) {
+          if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
+            fillBlock(xOffset + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : getCurrentShapeColor());
           }
-          if (k == 0)
-              currentRotation = getNextRotation(reverse);
+        }
       }
+      if (k == 0)
+        currentRotation = getNextRotation(reverse);
+    }
 
-      strip.show();
+    strip.show();
   }
 }
 
@@ -471,7 +501,7 @@ void joystickMovement() {
 #endif
 #ifdef USE_BUTTONS
   // Handle buttons
-  if ((now - lastMove) > MOVE_DELAY){
+  if ((now - lastMove) > MOVE_DELAY) {
     // Left
     bool leftPressed = debounceButton(BUTTON_LEFT);
     if (leftPressed && canMove(true)) {
@@ -498,8 +528,8 @@ void joystickMovement() {
   }
 
   //if (now - lastRotate > ROTATE_DELAY && debounceButton(BUTTON_ROTATE_REVERSE)) {
-    //lastRotate = now;
-    //rotate(true);
+  //lastRotate = now;
+  //rotate(true);
   //}
 #endif
 }
@@ -513,39 +543,44 @@ void anyWheel(int dontcare) {
   runrun = false;
 }
 
-void handleGesture(unsigned char type){
-    unsigned long now = millis();
+void anyXYZ(unsigned int x, unsigned int y, unsigned int z) {
+  runrun = false;
+  Skywriter.onXYZ(NULL);
+}
 
-    if (type == SW_FLICK_EAST_WEST) {
-        if (canMove(true)) {
-            xOffset--;
-        }
-    }
+void handleGesture(unsigned char type) {
+  unsigned long now = millis();
 
-    if (type == SW_FLICK_WEST_EAST) {
-        if (canMove(false)) {
-            xOffset++;
-        }
+  if (type == SW_FLICK_EAST_WEST) {
+    if (canMove(true)) {
+      xOffset--;
     }
+  }
 
-    if (type == SW_FLICK_NORTH_SOUTH) {
-        stamp -= level;
-        lastDown = now;
+  if (type == SW_FLICK_WEST_EAST) {
+    if (canMove(false)) {
+      xOffset++;
     }
+  }
+
+  if (type == SW_FLICK_NORTH_SOUTH) {
+    stamp -= level;
+    lastDown = now;
+  }
 
 }
 
 void handleAirwheel(int speed) {
-    unsigned long now = millis();
+  unsigned long now = millis();
 
-    if (speed > 0 && now - lastRotate > ROTATE_DELAY) {
-        lastRotate = now;
-        rotate(false);
+  if (speed > 5 && now - lastRotate > ROTATE_DELAY) {
+    lastRotate = now;
+    rotate(false);
 
-    } else if (speed < 0 && now - lastRotate > ROTATE_DELAY) {
-        lastRotate = now;
-        rotate(true);
-    }
+  } else if (speed < -5 && now - lastRotate > ROTATE_DELAY) {
+    lastRotate = now;
+    rotate(true);
+  }
 }
 #endif
 
@@ -565,7 +600,7 @@ void printBoardToSerial() {
 #ifdef DEBUG
   for (int y = 0; y < BOARD_HEIGHT; y++)  {
     for (int x = 0; x < BOARD_WIDTH; x++)  {
-      if (grid[x][y] == BACKGROUND_COLOR) {
+      if (getPixel(x,y) == BACKGROUND_COLOR) {
         Serial.print(" ");
       } else {
         Serial.print("X");
@@ -627,19 +662,19 @@ void setup() {
 
   // Clear out the EEPROM if this is our first time through. Good for keeping a realistic high score.
   unsigned int testValue;
-  EEPROM.get(sizeof(int)*2, testValue);
-  if (testValue != 0){
-    unsigned int test = 0;
-    EEPROM.put(0, test);
-    EEPROM.put(sizeof(int), test);
-    EEPROM.put(sizeof(int) * 2, test);
-  }
+    EEPROM.get(sizeof(int)*2, testValue);
+    if (testValue != 0){
+      unsigned int test = 0;
+      EEPROM.put(0, test);
+      EEPROM.put(sizeof(int), test);
+      EEPROM.put(sizeof(int) * 2, test);
+    }
 
-  unsigned int seed = 0;
-  EEPROM.get(0, seed);
-  randomSeed(seed);
-  seed = random(65535);
-  EEPROM.put(0, seed);
+    unsigned int seed = 0;
+    EEPROM.get(0, seed);
+    randomSeed(seed);
+    seed = random(65535);
+    EEPROM.put(0, seed);
   shapeColors[SHAPE_I] = SHAPE_I_COLOR;
   shapeColors[SHAPE_J] = SHAPE_J_COLOR;
   shapeColors[SHAPE_L] = SHAPE_L_COLOR;
@@ -675,19 +710,19 @@ void loop() {
   unsigned long now = millis();
   unsigned int noteDuration = 1000 / pgm_read_byte_near(noteDurations + currentNote);
 
-  if ((now - toneStamp) > noteDuration) {
-    noTone(BUZZER);
-  }
-
-  if ((now - toneStamp) > (noteDuration * 1.3)) {
-    toneStamp = now;
-    if (++currentNote > (sizeof(melody) / 2)) {
-      currentNote = 0;
+    if ((now - toneStamp) > noteDuration) {
+      noTone(BUZZER);
     }
 
-    tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
-  }
+    if ((now - toneStamp) > (noteDuration * 1.3)) {
+      toneStamp = now;
+      if (++currentNote > (sizeof(melody) / 2)) {
+        currentNote = 0;
+      }
 
+      tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
+    }
+  
   if ((now - stamp) > level - score) {
     stamp = millis();
     gravity(true);
@@ -703,7 +738,7 @@ void loop() {
   joystickMovement();
 
 #ifdef USE_SKYWRITER
-    Skywriter.poll();
+  Skywriter.poll();
 #endif
 
 }
