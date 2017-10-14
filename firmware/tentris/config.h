@@ -16,8 +16,8 @@
 #define JOY_Y             A1
 #define JOY_BTN           2
 #else
-#define BUTTON_LEFT       A0 
-#define BUTTON_RIGHT      A1 
+#define BUTTON_LEFT       A0
+#define BUTTON_RIGHT      A1
 #define BUTTON_DOWN       4 
 #define BUTTON_ROTATE     2 
 #define BUTTON_ROTATE_REVERSE 3
@@ -95,7 +95,7 @@
 #define DOWN_DELAY        150
 #define ROTATE_DELAY      500
 #define DEBOUNCE          50
-#define INITIAL_BLOCK_DELAY 1000
+#define INITIAL_BLOCK_DELAY 750
 
 #define ANIM_DELAY        400
 #define ANIM_CHASE_DELAY  50
