@@ -24,6 +24,7 @@ unsigned short currentNote = 0;
 unsigned short level = INITIAL_BLOCK_DELAY;
 unsigned int score = 0;
 unsigned long stamp = 0;
+unsigned long timeCollided = 0;
 unsigned long lastDown = 0;
 unsigned long lastRotate = 0;
 unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -315,7 +316,20 @@ bool isShapeColliding() {
           if (yOffset < -1) {
             gameOver();
           }
-          return true;
+
+          if (timeCollided + COLLISION_DELAY < millis()) {
+            Serial.println("Shape collided");
+            printBoardToSerial();
+            timeCollided = 0;
+            return true;
+
+          } else {
+            if (timeCollided == 0) {
+              timeCollided = millis();
+            }
+            return false;
+          }
+
         }
       }
 
@@ -731,7 +745,7 @@ void setup() {
 #ifdef USE_SKYWRITER
   Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
   // Hack to ensure that it connects
-  delay(50);
+  delay(1000);
   Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
   Skywriter.onGesture(handleGesture);
   Skywriter.onAirwheel(handleAirwheel);

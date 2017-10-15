@@ -97,6 +97,7 @@
 #define ROTATE_DELAY      500
 #define DEBOUNCE          50
 #define INITIAL_BLOCK_DELAY 750
+#define COLLISION_DELAY   200
 
 #define ANIM_DELAY        400
 #define ANIM_CHASE_DELAY  50
