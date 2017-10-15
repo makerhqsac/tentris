@@ -31,6 +31,7 @@ unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 COLOR shapeColors[SHAPE_COUNT];
 
 void fillBlock(byte x, byte y, COLOR color);
+uint16_t xyToCell(byte x, byte y);
 bool debounceButton(int pin);
 void printBoardToSerial();
 void animateRandom(bool firstRun);
@@ -234,11 +235,7 @@ void gameOver() {
 
 void fillBlock(byte x, byte y, COLOR color) {
   if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
-#ifdef TOPDOWN
-    strip.setPixelColor(BOARD_WIDTH * y + x, color.R, color.G, color.B);
-#else
-    strip.setPixelColor(BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x, color.R, color.G, color.B);
-#endif
+    strip.setPixelColor(xyToCell(x, y), color.R, color.G, color.B);
   }
   /*if (x >= BOARD_WIDTH || x < 0) {
     Serial.print("X exceeded width ");
@@ -252,6 +249,22 @@ void fillBlock(byte x, byte y, COLOR color) {
     Serial.print(",");
     Serial.println(y);
     }*/
+}
+
+uint16_t xyToCell(byte x, byte y) {
+#ifdef WIRING_SNAKE
+  if (y % 2 == 0) {
+    return y * BOARD_WIDTH + x;
+  } else {
+    return (y + 1) * BOARD_WIDTH - (x + 1);
+  }
+#else
+#ifdef TOPDOWN
+  return BOARD_WIDTH * y + x;
+#else
+  return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
+#endif
+#endif
 }
 
 COLOR getCurrentShapeColor() {
@@ -424,11 +437,7 @@ byte getNextRotation(bool reverse) {
 
 COLOR getPixel(uint16_t x, uint16_t y) {
   if (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT) {
-#ifdef TOPDOWN
-  uint16_t pixel = BOARD_WIDTH * y + x;
-#else
-  uint16_t pixel = BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
-#endif
+  uint16_t pixel = xyToCell(x, y);
   uint32_t c = strip.getPixelColor(pixel);
   COLOR retval;
   retval.R = (uint8_t)(c >> 16);
