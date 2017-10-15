@@ -59,7 +59,7 @@
 #define ANIMATE_MAX_BRIGHT 50
 #define COLOR_GRAY        COLOR {2, 2, 2}
 #define COLOR_WHITE       COLOR {25,25,25}
-#define COLOR_BLACK       COLOR {0,0,0}
+#define COLOR_BLACK       COLOR {6,6,6}
 #define COLOR_CYAN        COLOR {0,25,25}
 #define COLOR_YELLOW      COLOR {25,25,0}
 #define COLOR_BLUE        COLOR {0,0,25}
@@ -96,6 +96,7 @@
 #define ROTATE_DELAY      500
 #define DEBOUNCE          50
 #define INITIAL_BLOCK_DELAY 1000
+#define COLLISION_DELAY   200
 
 #define ANIM_DELAY        400
 #define ANIM_CHASE_DELAY  50

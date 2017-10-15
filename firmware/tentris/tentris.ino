@@ -24,6 +24,7 @@ unsigned short currentNote = 0;
 unsigned short level = INITIAL_BLOCK_DELAY;
 unsigned int score = 0;
 unsigned long stamp = 0;
+unsigned long timeCollided = 0;
 unsigned long lastDown = 0;
 unsigned long lastRotate = 0;
 unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -275,9 +276,19 @@ bool isShapeColliding() {
             gameOver();
           }
 
-          Serial.println("Shape collided");
-          printBoardToSerial();
-          return true;
+          if (timeCollided + COLLISION_DELAY < millis()) {
+            Serial.println("Shape collided");
+            printBoardToSerial();
+            timeCollided = 0;
+            return true;
+
+          } else {
+            if (timeCollided == 0) {
+              timeCollided = millis();
+            }
+            return false;
+          }
+
         }
       }
 
