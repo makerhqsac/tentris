@@ -34,9 +34,9 @@ COLOR shapeColors[SHAPE_COUNT];
 void fillBlock(byte x, byte y, COLOR color);
 bool debounceButton(int pin);
 void printBoardToSerial();
-void animateRandom();
-void animateChase();
-void animateRain();
+void animateRandom(bool firstRun);
+void animateChase(bool firstRun);
+void animateRain(bool firstRun);
 void checkForTetris();
 void handleGesture(unsigned char type);
 void handleAirwheel(int speed);
@@ -88,18 +88,20 @@ void waitForClick() {
 #ifdef USE_SKYWRITER
   runrun = true;
   long delayGesture = millis();
+  bool firstRun = true;
   while (runrun) {
     switch (choice) {
-      case 0: animateRandom(); break;
-      case 1: animateChase(); break;
-      case 2: animateRain(); break;
-      default: animateChase(); break;
+      case 0: animateRandom(firstRun); break;
+      case 1: animateChase(firstRun); break;
+      case 2: animateRain(firstRun); break;
+      default: animateChase(firstRun); break;
     }
     Skywriter.poll();
     if (debounceButton(BUTTON_ROTATE)) {
       runrun = false;
     }
 
+    firstRun = false;
     if (delayGesture > 0 && millis() - 5000 > delayGesture) {
       Skywriter.onGesture(anyGesture);
       Skywriter.onAirwheel(anyWheel);
@@ -132,7 +134,7 @@ COLOR randomColor() {
   c.B = (byte)random(ANIMATE_MAX_BRIGHT);
   return c;
 }
-void animateRandom() {
+void animateRandom(bool firstRun) {
   static long last = 0;
   if (abs(millis() - last) > ANIM_DELAY) {
     last = millis();
@@ -142,9 +144,11 @@ void animateRandom() {
   }
 }
 
-void animateChase() {
+void animateChase(bool firstRun) {
   static long last = 0;
   static int i = 0;
+  if (firstRun)
+    i = 0;
   if (abs(millis() - last) > ANIM_CHASE_DELAY) {
     last = millis();
     COLOR c = randomColor();
@@ -158,7 +162,7 @@ void animateChase() {
   }
 }
 
-void animateRain() {
+void animateRain(bool firstRun) {
   static long last = 0;
   if (abs(millis() - last) > ANIM_CHASE_DELAY) {
     int chance;
@@ -194,9 +198,33 @@ void saveScore() {
         }
   }
 }
+
+void drawScore(int s) {
+  int offset = 1;
+  if (s > 9) {
+    writeDigit(1,0);
+    s = s % 10;
+    offset = 4;
+  }
+  writeDigit(s, offset);
+  strip.show();
+}
+
+void writeDigit(int digit, int offset) {
+  for (int x = 0; x <= 6; x++) {
+    for (int y = 0; y < 7; y++) {
+      if (bitRead(numbers[digit][y], 6 - x))
+        fillBlock(offset + x, y, COLOR_WHITE);
+    }
+  }
+}
+
 void gameOver() {
   saveScore();
+  drawScore(score/LINE_SCORE_VALUE);
   Serial.println("Game over man! Game over!!");
+  Serial.println(score);
+  delay(2000);
   printBoardToSerial();
   waitForClick();
   clearBoard();
@@ -734,7 +762,7 @@ void loop() {
       tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
     }
   
-  if ((now - stamp) > level - score) {
+  if ((now - stamp) > level - min(score, 1000)) {
     stamp = millis();
     gravity(true);
   }
