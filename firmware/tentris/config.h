@@ -1,6 +1,7 @@
 #ifndef config_h
 #define config_h
 
+#undef WIRING_SNAKE
 #undef USE_ANALOG_JOY
 #define USE_SKYWRITER
 #define USE_BUTTONS
