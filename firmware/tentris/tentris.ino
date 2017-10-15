@@ -736,7 +736,7 @@ void setup() {
 #ifdef USE_SKYWRITER
   Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
   // Hack to ensure that it connects
-  delay(50);
+  delay(1000);
   Skywriter.begin(SK_PIN_TRFR, SK_PIN_RESET);
   Skywriter.onGesture(handleGesture);
   Skywriter.onAirwheel(handleAirwheel);
