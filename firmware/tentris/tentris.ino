@@ -317,7 +317,7 @@ bool isShapeColliding() {
             gameOver();
           }
 
-          if (timeCollided + COLLISION_DELAY < millis()) {
+          if (timeCollided + (INITIAL_BLOCK_DELAY - min(score*2, INITIAL_BLOCK_DELAY)) < millis()) {
             Serial.println("Shape collided");
             printBoardToSerial();
             timeCollided = 0;
