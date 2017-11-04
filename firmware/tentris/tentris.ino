@@ -61,6 +61,11 @@ bool hittingBottom() {
 void drawNextShape() {
   Serial.print("Next shape: ");
   Serial.println(shapeNames[nextShapeIndex]);
+#ifdef SHOWNEXTSHAPE
+    if (bitRead(shapes[nextShapeIndex][0][y], x) == 1) {
+      fillBlock((k == 0 ? lastXOffset : xOffset) + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : shapeColors[nextShapeIndex]);
+    }
+#endif
 }
 
 void nextShape() {
@@ -201,11 +206,11 @@ void saveScore() {
 }
 
 void drawScore(int s) {
-  int offset = 1;
+  int offset = 0;
   if (s > 9) {
     writeDigit(1,0);
     s = s % 10;
-    offset = 4;
+    offset = 5;
   }
   writeDigit(s, offset);
   strip.show();
@@ -235,29 +240,28 @@ void gameOver() {
 }
 
 void fillBlock(byte x, byte y, COLOR color) {
+#ifdef SHOWNEXTBLOCK
+#else
   if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
     strip.setPixelColor(xyToCell(x, y), color.R, color.G, color.B);
   }
-  /*if (x >= BOARD_WIDTH || x < 0) {
-    Serial.print("X exceeded width ");
-    Serial.print(x);
-    Serial.print(",");
-    Serial.println(y);
-    }
-    if (y >= BOARD_HEIGHT || y < 0) {
-    Serial.print("Y exceeded height ");
-    Serial.print(x);
-    Serial.print(",");
-    Serial.println(y);
-    }*/
+#endif
 }
 
 uint16_t xyToCell(byte x, byte y) {
 #ifdef WIRING_SNAKE
+#ifdef TOPDOWN
   if (y % 2 == 0) {
     return y * BOARD_WIDTH + x;
   } else {
     return (y + 1) * BOARD_WIDTH - (x + 1);
+  }
+#else
+#endif
+  if (y % 2 == 0) {
+    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
+  } else {
+    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + BOARD_WIDTH - x - 1;
   }
 #else
 #ifdef TOPDOWN
@@ -317,7 +321,7 @@ bool isShapeColliding() {
             gameOver();
           }
 
-          if (timeCollided + (INITIAL_BLOCK_DELAY - min(score*2, INITIAL_BLOCK_DELAY)) < millis()) {
+          if (timeCollided + COLLISION_DELAY < millis()) {
             Serial.println("Shape collided");
             printBoardToSerial();
             timeCollided = 0;
