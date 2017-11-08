@@ -23,6 +23,7 @@
 #define BUTTON_ROTATE     2 
 #define BUTTON_ROTATE_REVERSE 3
 #endif
+#define SEVENDIGITS 5
 
 
 #ifdef USE_SKYWRITER

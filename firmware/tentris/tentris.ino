@@ -6,7 +6,7 @@
 #include "config.h"
 #include "shapes.h"
 #include "melody.h"
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(BOARD_WIDTH * BOARD_HEIGHT, NEO_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(BOARD_WIDTH * BOARD_HEIGHT + 7 * SEVENDIGITS, NEO_PIN, NEO_GRB + NEO_KHZ800);
 bool saveScores = true;
 byte currentShape = 0;
 byte currentRotation = 0;
@@ -225,9 +225,102 @@ void writeDigit(int digit, int offset) {
   }
 }
 
+void drawSevenSegmentScore(int s) {
+  int temp = s;
+  int offset = BOARD_WIDTH * BOARD_HEIGHT;
+  for (int i = 0; i < SEVENDIGITS; i++) {
+    byte digit = (temp % 10) & B11111111;
+    temp = temp / 10;
+    drawSevenSegment(offset + i * 7, digit, COLOR_WHITE);
+  }
+}
+
+void drawSevenSegment(int offset, byte digit, COLOR color){
+  Serial.println(digit);
+  for (int i = 0; i < 7; i++) {
+    strip.setPixelColor(offset + i, 0,0,0);
+  }
+  switch (digit) {
+    case 0: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 2, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    case 1: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      break;
+    case 2: 
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 2, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      break;
+    case 3: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      break;
+    case 4: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    case 5: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    case 6: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 2, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    case 7: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      break;
+    case 8: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 2, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    case 9: 
+      strip.setPixelColor(offset + 0, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 1, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 3, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 4, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 5, color.R, color.G, color.B);
+      strip.setPixelColor(offset + 6, color.R, color.G, color.B);
+      break;
+    default: break;
+  }
+}
+
 void gameOver() {
   saveScore();
-  drawScore(score/LINE_SCORE_VALUE);
+  if (SEVENDIGITS > 0)
+    drawSevenSegmentScore(score);
+  else
+    drawScore(score/LINE_SCORE_VALUE);
+  
   Serial.println("Game over man! Game over!!");
   Serial.println(score);
   delay(2000);
