@@ -41,6 +41,7 @@
 
 #define BOARD_WIDTH       10
 #define BOARD_HEIGHT      20
+#define ROWS_PER_GROUP    4
 
 #define GAMEOVER_X        90
 #define GAMEOVER_Y        20

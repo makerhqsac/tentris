@@ -1,12 +1,17 @@
 #include <SPI.h>
 #include <EEPROM.h>
-#include <Adafruit_NeoPixel.h>
+#include <Adafruit_NeoMatrix.h>
 #include <skywriter.h>
 
 #include "config.h"
 #include "shapes.h"
 #include "melody.h"
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(BOARD_WIDTH * BOARD_HEIGHT + 7 * SEVENDIGITS, NEO_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoMatrix strip = Adafruit_NeoMatrix(BOARD_WIDTH,
+                                               BOARD_HEIGHT,
+                                               NEO_PIN,
+                                               NEO_MATRIX_BOTTOM + NEO_MATRIX_LEFT + NEO_MATRIX_ROWS,
+                                               NEO_GRB + NEO_KHZ800);
+
 bool saveScores = true;
 byte currentShape = 0;
 byte currentRotation = 0;
@@ -135,9 +140,9 @@ void waitForClick() {
 
 COLOR randomColor() {
   COLOR c;
-  c.R = (byte)random(ANIMATE_MAX_BRIGHT);
-  c.G = (byte)random(ANIMATE_MAX_BRIGHT);
-  c.B = (byte)random(ANIMATE_MAX_BRIGHT);
+  c.R = (byte)random(ANIMATE_MAX_BRIGHT/2+ANIMATE_MAX_BRIGHT);
+  c.G = (byte)random(ANIMATE_MAX_BRIGHT/2+ANIMATE_MAX_BRIGHT);
+  c.B = (byte)random(ANIMATE_MAX_BRIGHT/2+ANIMATE_MAX_BRIGHT);
   return c;
 }
 void animateRandom(bool firstRun) {
@@ -159,8 +164,8 @@ void animateChase(bool firstRun) {
     last = millis();
     COLOR c = randomColor();
     COLOR b = BACKGROUND_COLOR;
-    strip.setPixelColor(i, c.R, c.G, c.B); // Draw new pixel
-    strip.setPixelColor(i - ANIM_CHASE_LENGTH, b.R, b.G, b.B); // Erase pixel a few steps back
+    fillBlock(i%BOARD_WIDTH, i/BOARD_WIDTH, c);
+    fillBlock((i - ANIM_CHASE_LENGTH)%BOARD_WIDTH, (i - ANIM_CHASE_LENGTH)/BOARD_WIDTH, b); // Erase pixel a few steps back
     strip.show();
     i++;
     if (i > BOARD_WIDTH * BOARD_HEIGHT + ANIM_CHASE_LENGTH)
@@ -336,7 +341,8 @@ void fillBlock(byte x, byte y, COLOR color) {
 #ifdef SHOWNEXTBLOCK
 #else
   if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
-    strip.setPixelColor(xyToPixel(x, y), color.R, color.G, color.B);
+    strip.drawPixel(x, y, strip.Color(color.R, color.G, color.B));
+    //strip.setPixelColor(xyToPixel(x, y), color.R, color.G, color.B);
   }
 #endif
 }
@@ -770,6 +776,7 @@ void clearBoard() {
 void setup() {
 
   strip.begin();
+  strip.setRemapFunction(xyToPixel);
   strip.show(); // Initialize all pixels to 'off'
   Serial.begin(9600);
   while (!Serial);
