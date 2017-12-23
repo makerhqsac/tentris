@@ -2,11 +2,14 @@
 #define config_h
 
 #undef WIRING_SNAKE
+#define WIRING_SNAKE
 #undef USE_ANALOG_JOY
 #define USE_SKYWRITER
 #define USE_BUTTONS
 #undef DIM
 
+#define DIM2
+#define TOP_DOWN
 #define SD_CS             8
 
 #define NEO_PIN           7
@@ -24,6 +27,7 @@
 #define BUTTON_ROTATE_REVERSE 3
 #endif
 #define SEVENDIGITS 5
+#define SEVENDIGITS 0
 
 
 #ifdef USE_SKYWRITER

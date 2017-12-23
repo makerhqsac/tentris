@@ -32,7 +32,7 @@ unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 COLOR shapeColors[SHAPE_COUNT];
 
 void fillBlock(byte x, byte y, COLOR color);
-uint16_t xyToCell(byte x, byte y);
+uint16_t xyToPixel(uint16_t x, uint16_t y);
 bool debounceButton(int pin);
 void printBoardToSerial();
 void animateRandom(bool firstRun);
@@ -336,32 +336,34 @@ void fillBlock(byte x, byte y, COLOR color) {
 #ifdef SHOWNEXTBLOCK
 #else
   if (x < BOARD_WIDTH && y < BOARD_HEIGHT) {
-    strip.setPixelColor(xyToCell(x, y), color.R, color.G, color.B);
+    strip.setPixelColor(xyToPixel(x, y), color.R, color.G, color.B);
   }
 #endif
 }
 
-uint16_t xyToCell(byte x, byte y) {
-#ifdef WIRING_SNAKE
-#ifdef TOPDOWN
-  if (y % 2 == 0) {
-    return y * BOARD_WIDTH + x;
-  } else {
-    return (y + 1) * BOARD_WIDTH - (x + 1);
-  }
+uint16_t xyToPixel(uint16_t x, uint16_t y) {
+    int row_in_group = y%ROWS_PER_GROUP;
+
+    uint16_t pixel = 0;
+    switch(row_in_group) {
+        case 0:
+            pixel = y * BOARD_WIDTH + x;
+            break;
+        case 1:
+            pixel = (y+1) * BOARD_WIDTH + x;
+            break;
+        case 2:
+            pixel = (y * BOARD_WIDTH - x) - 1;
+            break;
+        case 3:
+            pixel = ((y+1) * BOARD_WIDTH) - x - 1;
+            break;
+    }
+
+#ifdef TOP_DOWN
+    return (BOARD_WIDTH * BOARD_HEIGHT) - pixel - 1;
 #else
-#endif
-  if (y % 2 == 0) {
-    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
-  } else {
-    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + BOARD_WIDTH - x - 1;
-  }
-#else
-#ifdef TOPDOWN
-  return BOARD_WIDTH * y + x;
-#else
-  return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
-#endif
+    return pixel;
 #endif
 }
 
@@ -548,7 +550,7 @@ byte getNextRotation(bool reverse) {
 
 COLOR getPixel(uint16_t x, uint16_t y) {
   if (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT) {
-  uint16_t pixel = xyToCell(x, y);
+  uint16_t pixel = xyToPixel(x, y);
   uint32_t c = strip.getPixelColor(pixel);
   COLOR retval;
   retval.R = (uint8_t)(c >> 16);
