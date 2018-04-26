@@ -1,5 +1,6 @@
 #include <SPI.h>
 #include <EEPROM.h>
+#include <SoftwareSerial.h>
 #include <Adafruit_NeoMatrix.h>
 #include <skywriter.h>
 
@@ -22,12 +23,16 @@ short yOffset = -4;
 short xOffset = 0;
 short lastY = -4;
 short lastX = 0;
-
+#ifdef SERIALTX
+SoftwareSerial serialScore(SERIALRX, SERIALTX); 
+#endif
 unsigned long toneStamp = millis();
 unsigned short currentNote = 0;
 
 unsigned short level = INITIAL_BLOCK_DELAY;
 unsigned int score = 0;
+unsigned int scoreBig = 0;
+unsigned int scoreBigDisplay = 0;
 unsigned long stamp = 0;
 unsigned long timeCollided = 0;
 unsigned long lastDown = 0;
@@ -210,6 +215,24 @@ void saveScore() {
   }
 }
 
+void sendSerialScore() {
+#ifdef SERIALTX
+  static long last = 0;
+  static int offset = BIGSCORE / (SERIALSCORESPEED / SERIALSCOREDELAY);
+  if (scoreBig = 0) {
+    serialScore.println();
+  } else {
+    if (abs(millis() - last) > SERIALSCOREDELAY) {
+      if (scoreBigDisplay < scoreBig)
+        scoreBigDisplay += offset;
+      if (scoreBigDisplay > scoreBig)
+        scoreBigDisplay = scoreBig;
+      serialScore.println(scoreBigDisplay);
+      last = millis();
+    }
+  }
+#endif
+}
 void drawScore(int s) {
   int offset = 0;
   if (s > 9) {
@@ -323,6 +346,8 @@ void gameOver() {
   saveScore();
   if (SEVENDIGITS > 0)
     drawSevenSegmentScore(score);
+  else if (SERIALSCOREDELAY > 0)
+    sendSerialScore();
   else
     drawScore(score/LINE_SCORE_VALUE);
   
@@ -333,6 +358,8 @@ void gameOver() {
   waitForClick();
   clearBoard();
   score = 0;
+  scoreBig = 0;
+  scoreBigDisplay = 0;
   nextShape();
   strip.show();
 }
@@ -455,6 +482,7 @@ void detectCurrentShapeCollision() {
 void checkForTetris() {
   bool foundScore = false;
   byte rowsPastFirstMatching = 0;
+  byte rowsCounted = 0;
   for (byte row = 0; row < BOARD_HEIGHT; row++) {
     // Tiny optimization: no need to scan more than four rows for line clears
     // This optimization sounds wrong.
@@ -470,6 +498,7 @@ void checkForTetris() {
       // If detected full line
       if (col == (BOARD_WIDTH - 1)) {
         score += LINE_SCORE_VALUE;
+        rowsCounted++;
         Serial.print("Score: ");
         Serial.println(score);
         foundScore = true;
@@ -487,6 +516,9 @@ void checkForTetris() {
       }
     }
   }
+
+  scoreBig += BIGSCORE * score;
+  scoreBig += (score - 1) * BIGSCORE_BONUS;
 
   strip.show();
 }
@@ -781,6 +813,9 @@ void setup() {
   Serial.begin(9600);
   while (!Serial);
   Serial.println("Setup start");
+#ifdef SERIALTX
+  serialScore.begin(SERIALSCOREBAUD);
+#endif
 
 #ifdef USE_SD
   if (!SD.begin(SD_CS)) {
@@ -876,7 +911,8 @@ void loop() {
 
       tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
     }
-  
+    
+  sendSerialScore();
   if ((now - stamp) > level - min(score, 1000)) {
     stamp = millis();
     gravity(true);
