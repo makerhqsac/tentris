@@ -12,7 +12,7 @@ Adafruit_NeoMatrix strip = Adafruit_NeoMatrix(BOARD_WIDTH,
                                                NEO_PIN,
                                                NEO_MATRIX_BOTTOM + NEO_MATRIX_LEFT + NEO_MATRIX_ROWS,
                                                NEO_GRB + NEO_KHZ800);
-
+//#define DEBUG
 bool saveScores = true;
 byte currentShape = 0;
 byte currentRotation = 0;
@@ -23,21 +23,18 @@ short yOffset = -4;
 short xOffset = 0;
 short lastY = -4;
 short lastX = 0;
-#ifdef SERIALTX
-SoftwareSerial serialScore(SERIALRX, SERIALTX); 
-#endif
 unsigned long toneStamp = millis();
 unsigned short currentNote = 0;
 
 unsigned short level = INITIAL_BLOCK_DELAY;
 unsigned int score = 0;
-unsigned int scoreBig = 0;
-unsigned int scoreBigDisplay = 0;
+long scoreBig = -1;
+long scoreBigDisplay = 0;
 unsigned long stamp = 0;
 unsigned long timeCollided = 0;
 unsigned long lastDown = 0;
 unsigned long lastRotate = 0;
-unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+unsigned long lastButton[] = { 0, 0, 0, 0, 0, 0 };
 
 COLOR shapeColors[SHAPE_COUNT];
 
@@ -55,6 +52,14 @@ void anyGesture(unsigned char dontcare);
 void anyWheel(int dontcare);
 void anyXYZ(unsigned int x, unsigned int y, unsigned int z);
 
+#ifdef DEBUG    //Macros are usually in all capital letters.
+#define DPRINT(...)    Serial.print(__VA_ARGS__)     //DPRINT is a macro, debug print
+#define DPRINTLN(...)  Serial.println(__VA_ARGS__)   //DPRINTLN is a macro, debug print with new line
+#else
+#define DPRINT(...)     //now defines a blank line
+#define DPRINTLN(...)   //now defines a blank line
+#endif
+
 void clearBoard();
 
 bool hittingBottom() {
@@ -68,9 +73,10 @@ bool hittingBottom() {
 
   return false;
 }
+
 void drawNextShape() {
-  Serial.print("Next shape: ");
-  Serial.println(shapeNames[nextShapeIndex]);
+  DPRINT("Next shape: ");
+  DPRINTLN(shapeNames[nextShapeIndex]);
 #ifdef SHOWNEXTSHAPE
     if (bitRead(shapes[nextShapeIndex][0][y], x) == 1) {
       fillBlock((k == 0 ? lastXOffset : xOffset) + x, yOffset + i, k == 0 ? BACKGROUND_COLOR : shapeColors[nextShapeIndex]);
@@ -202,36 +208,35 @@ void animateRain(bool firstRun) {
 }
 void saveScore() {
   if (saveScores) {
-    unsigned int oldHigh;
+    long oldHigh;
         EEPROM.get(sizeof(int), oldHigh);
         if (score > oldHigh) {
-          EEPROM.put(sizeof(int), score);
-          Serial.print("New high score!! ");
-          Serial.println(score);
+          EEPROM.put(sizeof(int), scoreBig);
+          DPRINT("New high score!! ");
+          DPRINTLN(score);
         } else {
-          Serial.print("High score remains at ");
-          Serial.println(score);
+          DPRINT("High score remains at ");
+          DPRINTLN(score);
         }
   }
 }
 
 void sendSerialScore() {
-#ifdef SERIALTX
   static long last = 0;
-  static int offset = BIGSCORE / (SERIALSCORESPEED / SERIALSCOREDELAY);
-  if (scoreBig = 0) {
-    serialScore.println();
-  } else {
+  static long offset = BIGSCORE / (SERIALSCORESPEED / SERIALSCOREDELAY);
+  if (scoreBig < 0) {
+    Serial.print("\n");
+    scoreBig = 0;
+  } else if (scoreBig >= 0) {
     if (abs(millis() - last) > SERIALSCOREDELAY) {
       if (scoreBigDisplay < scoreBig)
         scoreBigDisplay += offset;
       if (scoreBigDisplay > scoreBig)
         scoreBigDisplay = scoreBig;
-      serialScore.println(scoreBigDisplay);
+      Serial.println(scoreBigDisplay);
       last = millis();
     }
   }
-#endif
 }
 void drawScore(int s) {
   int offset = 0;
@@ -264,7 +269,7 @@ void drawSevenSegmentScore(int s) {
 }
 
 void drawSevenSegment(int offset, byte digit, COLOR color){
-  Serial.println(digit);
+  DPRINTLN(digit);
   for (int i = 0; i < 7; i++) {
     strip.setPixelColor(offset + i, 0,0,0);
   }
@@ -351,14 +356,16 @@ void gameOver() {
   else
     drawScore(score/LINE_SCORE_VALUE);
   
-  Serial.println("Game over man! Game over!!");
-  Serial.println(score);
+  DPRINTLN("Game over man! Game over!!");
+  DPRINTLN(score);
   delay(2000);
   printBoardToSerial();
   waitForClick();
   clearBoard();
   score = 0;
-  scoreBig = 0;
+  scoreBig = -1;
+  if (SERIALSCOREDELAY > 0)
+    sendSerialScore();
   scoreBigDisplay = 0;
   nextShape();
   strip.show();
@@ -373,6 +380,36 @@ void fillBlock(byte x, byte y, COLOR color) {
   }
 #endif
 }
+
+
+
+uint16_t xyToPixel2(uint16_t x, uint16_t y) {
+#ifdef WIRING_SNAKE
+#ifdef TOPDOWN
+  if (y % 2 == 0) {
+    return y * BOARD_WIDTH + x;
+  } else {
+    return (y + 1) * BOARD_WIDTH - (x + 1);
+  }
+#else
+#endif
+  if (y % 2 == 0) {
+    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
+  } else {
+    return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + BOARD_WIDTH - x - 1;
+  }
+#else
+#ifdef TOPDOWN
+  return BOARD_WIDTH * y + x;
+#else
+  return BOARD_WIDTH * (BOARD_HEIGHT - y - 1) + x;
+#endif
+#endif
+}
+
+
+
+
 
 uint16_t xyToPixel(uint16_t x, uint16_t y) {
     int row_in_group = y%ROWS_PER_GROUP;
@@ -450,7 +487,7 @@ bool isShapeColliding() {
           }
 
           if (timeCollided + COLLISION_DELAY < millis()) {
-            Serial.println("Shape collided");
+            DPRINTLN("Shape collided");
             printBoardToSerial();
             timeCollided = 0;
             return true;
@@ -483,6 +520,7 @@ void checkForTetris() {
   bool foundScore = false;
   byte rowsPastFirstMatching = 0;
   byte rowsCounted = 0;
+ 
   for (byte row = 0; row < BOARD_HEIGHT; row++) {
     // Tiny optimization: no need to scan more than four rows for line clears
     // This optimization sounds wrong.
@@ -499,8 +537,8 @@ void checkForTetris() {
       if (col == (BOARD_WIDTH - 1)) {
         score += LINE_SCORE_VALUE;
         rowsCounted++;
-        Serial.print("Score: ");
-        Serial.println(score);
+        DPRINT("Score: ");
+        DPRINTLN(score);
         foundScore = true;
 
         for (byte i = 0; i < BOARD_WIDTH; i++) {
@@ -516,10 +554,11 @@ void checkForTetris() {
       }
     }
   }
-
-  scoreBig += BIGSCORE * score;
-  scoreBig += (score - 1) * BIGSCORE_BONUS;
-
+  
+  if (foundScore) {
+    scoreBig += BIGSCORE * rowsCounted;
+    scoreBig += (rowsCounted - 1) * BIGSCORE_BONUS;
+  }
   strip.show();
 }
 
@@ -581,8 +620,8 @@ byte getNextRotation(bool reverse) {
     returnValue = currentRotation == 0 ? shapeRotations[currentShape] - 1 : currentRotation - 1;
   else
     returnValue = (shapeRotations[currentShape] - 1) == currentRotation ? 0 : currentRotation + 1;
-  Serial.print("Rotation: ");
-  Serial.println(returnValue);
+  DPRINT("Rotation: ");
+  DPRINTLN(returnValue);
   return returnValue;
 }
 
@@ -769,12 +808,23 @@ void handleAirwheel(int speed) {
 }
 #endif
 
+unsigned int buttonRemap(int pin) {
+  switch (pin) {
+    case BUTTON_LEFT: return 0;
+    case BUTTON_RIGHT: return 1;
+    case BUTTON_DOWN: return 2;
+    case BUTTON_ROTATE: return 3;
+    case BUTTON_ROTATE_REVERSE: return 4;
+    default: return 5;
+  }
+}
+
 bool debounceButton(int pin) {
   unsigned long now = millis();
-  if (digitalRead(pin) == LOW && abs(now - lastButton[pin]) > DEBOUNCE) {
-    lastButton[pin] = now;
-    Serial.print("Button: ");
-    Serial.println(pin);
+  if (digitalRead(pin) == LOW && abs(now - lastButton[buttonRemap(pin)]) > DEBOUNCE) {
+    lastButton[buttonRemap(pin)] = now;
+    //DPRINT("Button: ");
+    //DPRINTLN(pin);
     return true;
   } else {
     return false;
@@ -786,12 +836,12 @@ void printBoardToSerial() {
   for (int y = 0; y < BOARD_HEIGHT; y++)  {
     for (int x = 0; x < BOARD_WIDTH; x++)  {
       if (getPixel(x,y) == BACKGROUND_COLOR) {
-        Serial.print(" ");
+        DPRINT(" ");
       } else {
-        Serial.print("X");
+        DPRINT("X");
       }
     }
-    Serial.println();
+    DPRINTLN();
   }
 #endif
 }
@@ -810,16 +860,13 @@ void setup() {
   strip.begin();
   strip.setRemapFunction(xyToPixel);
   strip.show(); // Initialize all pixels to 'off'
-  Serial.begin(9600);
+  Serial.begin(38400);
   while (!Serial);
-  Serial.println("Setup start");
-#ifdef SERIALTX
-  serialScore.begin(SERIALSCOREBAUD);
-#endif
+  DPRINTLN("Setup start");
 
 #ifdef USE_SD
   if (!SD.begin(SD_CS)) {
-    Serial.println("SD init failed!");
+    DPRINTLN("SD init failed!");
     return;
   }
 
@@ -830,8 +877,8 @@ void setup() {
   }
 
   if (!SD.exists(FILE_NAME)) {
-    Serial.print("Couldn't access file on SD card: ");
-    Serial.println(FILE_NAME);
+    DPRINT("Couldn't access file on SD card: ");
+    DPRINTLN(FILE_NAME);
     saveScores = false;
   }
 #endif
@@ -851,12 +898,12 @@ void setup() {
 
   // Clear out the EEPROM if this is our first time through. Good for keeping a realistic high score.
   unsigned int testValue;
-    EEPROM.get(sizeof(int)*2, testValue);
+    EEPROM.get(sizeof(int) + sizeof(long), testValue);
     if (testValue != 0){
       unsigned int test = 0;
       EEPROM.put(0, test);
       EEPROM.put(sizeof(int), test);
-      EEPROM.put(sizeof(int) * 2, test);
+      EEPROM.put(sizeof(int) + sizeof(long), test);
     }
 
     unsigned int seed = 0;
@@ -864,6 +911,14 @@ void setup() {
     randomSeed(seed);
     seed = random(65535);
     EEPROM.put(0, seed);
+
+    long oldHigh;
+    EEPROM.get(sizeof(int), oldHigh);
+    delay(5000);
+    Serial.println(oldHigh);
+    delay(5000);
+    Serial.println("\n");
+
   shapeColors[SHAPE_I] = SHAPE_I_COLOR;
   shapeColors[SHAPE_J] = SHAPE_J_COLOR;
   shapeColors[SHAPE_L] = SHAPE_L_COLOR;
@@ -879,8 +934,8 @@ void setup() {
   currentShape = random(SHAPE_COUNT);
   nextShapeIndex = random(SHAPE_COUNT);
   nextShape();
-  Serial.print("First shape: ");
-  Serial.println(shapeNames[currentShape]);
+  DPRINT("First shape: ");
+  DPRINTLN(shapeNames[currentShape]);
   stamp = millis();
 
 #ifdef USE_SKYWRITER
@@ -892,7 +947,7 @@ void setup() {
   Skywriter.onAirwheel(handleAirwheel);
 #endif
 
-  Serial.println("Setup end");
+  DPRINTLN("Setup end");
 }
 
 void loop() {
@@ -911,8 +966,8 @@ void loop() {
 
       tone(BUZZER, pgm_read_word_near(melody + currentNote), noteDuration);
     }
-    
-  sendSerialScore();
+  if (scoreBig > 0)
+    sendSerialScore();
   if ((now - stamp) > level - min(score, 1000)) {
     stamp = millis();
     gravity(true);

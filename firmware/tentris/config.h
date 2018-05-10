@@ -1,14 +1,13 @@
 #ifndef config_h
 #define config_h
 
-#undef WIRING_SNAKE
-#define WIRING_SNAKE
+#undef WIRING_SNAKE 
+#define WIRING_SNAKE 
 #undef USE_ANALOG_JOY
 #define USE_SKYWRITER
 #define USE_BUTTONS
-#undef DIM
 
-#define DIM2
+#undef DIM
 #define TOP_DOWN
 #define SD_CS             8
 
@@ -26,7 +25,6 @@
 #define BUTTON_ROTATE     2 
 #define BUTTON_ROTATE_REVERSE 3
 #endif
-#define SEVENDIGITS 5
 #define SEVENDIGITS 0
 
 
@@ -116,8 +114,8 @@
 #define BIGSCORE 935672
 #define BIGSCORE_BONUS 311890
 #define SERIALSCOREDELAY 200
-#define SERIALTX 11
-#define SERIALRX 10
+//#define SERIALTX 11
+//#define SERIALRX 10
 #define SERIALSCOREBAUD 38400
 #define SERIALSCORESPEED 2000
 #endif
