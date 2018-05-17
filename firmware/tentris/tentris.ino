@@ -378,7 +378,7 @@ void gameOver() {
   waitForClick();
   clearBoard();
   score = 0;
-  scoreBig = -1;
+  scoreBig = 0;
   if (SERIALSCOREDELAY > 0)
     sendSerialScore();
   scoreBigDisplay = 0;
