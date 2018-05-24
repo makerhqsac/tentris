@@ -102,7 +102,7 @@
 #define DEBOUNCE          50
 #define INITIAL_BLOCK_DELAY 750
 
-#define COLLISION_DELAY   100
+#define COLLISION_DELAY   50
 
 #define ANIM_DELAY        400
 #define ANIM_CHASE_DELAY  50

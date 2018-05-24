@@ -66,7 +66,22 @@ bool hittingBottom() {
   for (int i = 3; i != 0; i--) {
     for (int j = 3; j != 0; j--) {
       if (bitRead(shapes[currentShape][currentRotation][i], j) == 1) {
-        return (i + 1 + yOffset) >= BOARD_HEIGHT;
+        if ((i + 1 + yOffset) >= BOARD_HEIGHT) {
+        	if (timeCollided > 0 && timeCollided + COLLISION_DELAY < millis()) {
+            	DPRINTLN("hitting bottom true");
+        		printBoardToSerial();
+        		timeCollided = 0;
+        		return true;
+        	} else {
+        		if (timeCollided == 0) {
+        			timeCollided = millis();
+        		}
+        		DPRINTLN("hitting bottom false");
+        		return false;
+        	}
+        } else {
+        	return false;
+        }
       }
     }
   }
@@ -363,7 +378,7 @@ void gameOver() {
   waitForClick();
   clearBoard();
   score = 0;
-  scoreBig = -1;
+  scoreBig = 0;
   if (SERIALSCOREDELAY > 0)
     sendSerialScore();
   scoreBigDisplay = 0;
@@ -453,7 +468,11 @@ void gravity(bool apply) {
       }
     }
 
-    if (k == 0 && apply) {
+	if (timeCollided > 0 && timeCollided + COLLISION_DELAY < millis()) {
+		timeCollided = 0;
+	}
+
+    if (k == 0 && timeCollided == 0 && apply) {
       yOffset++;
     }
   }
@@ -484,21 +503,22 @@ bool isShapeColliding() {
         if (getPixel(xOffset + x, max(0, yOffset + i + 1)) != BACKGROUND_COLOR) {
           if (yOffset < -1) {
             gameOver();
+            timeCollided = 0;
+            return false;
           }
 
-          if (timeCollided + COLLISION_DELAY < millis()) {
-            DPRINTLN("Shape collided");
+          if (timeCollided > 0 && timeCollided + COLLISION_DELAY < millis()) {
+            DPRINTLN("Shape collided true");
             printBoardToSerial();
             timeCollided = 0;
             return true;
-
           } else {
             if (timeCollided == 0) {
               timeCollided = millis();
             }
+            DPRINTLN("Shape collided false");
             return false;
           }
-
         }
       }
 
@@ -914,9 +934,9 @@ void setup() {
 
     long oldHigh;
     EEPROM.get(sizeof(int), oldHigh);
-    delay(5000);
+    delay(2000);
     Serial.println(oldHigh);
-    delay(5000);
+    delay(2000);
     Serial.println("\n");
 
   shapeColors[SHAPE_I] = SHAPE_I_COLOR;
@@ -973,7 +993,7 @@ void loop() {
     gravity(true);
   }
 
-  if ((lastX != xOffset) || (lastY != yOffset)) {
+  if ((lastX != xOffset) || (lastY != yOffset) || timeCollided > 0) {
     gravity(false);
     detectCurrentShapeCollision();
     lastX = xOffset;
